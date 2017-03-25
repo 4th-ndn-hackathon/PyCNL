@@ -23,8 +23,8 @@ the NameSync protocol to add announced names to a NameSpace object.
 """
 
 import logging
-import chatbuf_pb2
 import time
+import json
 from pyndn.sync import ChronoSync2013
 from pyndn import Name
 from pyndn import Interest
@@ -86,8 +86,8 @@ class NameSyncHandler(object):
             # Forming Sync Data Packet.
             if name != "":
                 self._sync.publishNextSequenceNo()
-                self._messageCacheAppend(chatbuf_pb2.ChatMessage.ADD, name)
-                print("announced: " + name)
+                self._messageCacheAppend(name)
+                print("announced: " + name.toUri())
 
         @staticmethod
         def getNowMilliseconds():
@@ -148,27 +148,21 @@ class NameSyncHandler(object):
             """
             Send back a Chat Data Packet which contains the user's message.
             """
-            content = chatbuf_pb2.ChatMessage()
-            sequenceNo = int(
-              interest.getName()[-1].toEscapedString())
+            sequenceNo = int(interest.getName()[-1].toEscapedString())
             gotContent = False
             for i in range(len(self._messageCache) - 1, -1, -1):
                 message = self._messageCache[i]
                 if message.sequenceNo == sequenceNo:
-                    if message.messageType == chatbuf_pb2.ChatMessage.ADD:
-                        # Use setattr because "from" is a reserved keyword.
-                        content.data = message.message
-                        content.type = message.messageType
-                        content.timestamp = int(round(message.time / 1000.0))
-
-                    gotContent = True
-                    break
+                    # Use setattr because "from" is a reserved keyword.
+                    content = json.dumps({'name':message.name.toUri(), 
+                        'timestamp':int(round(message.time / 1000.0))})
+                gotContent = True
+                break
 
             if gotContent:
                 # TODO: Check if this works in Python 3.
-                array = content.SerializeToString()
                 data = Data(interest.getName())
-                data.setContent(Blob(array))
+                data.setContent(content)
                 self._keyChain.sign(data, self._certificateName)
                 try:
                     face.putData(data)
@@ -179,24 +173,21 @@ class NameSyncHandler(object):
 
         def _onData(self, interest, data):
             """
-            Process the incoming Chat data.
+            Process the incoming data.
             """
             # TODO: Check if this works in Python 3.
-            content = chatbuf_pb2.ChatMessage()
-            content.ParseFromString(data.getContent().toRawStr())
-            prefix = data.getName().getPrefix(-2).toUri()
-            sessionNo = int(data.getName().get(-2).toEscapedString())
-            sequenceNo = int(data.getName().get(-1).toEscapedString())
-
-            if (content.type == chatbuf_pb2.ChatMessage.ADD):
-                print("got: "+content.data)
-                self._namespace.getChild(content.data)
+            try:
+                content = json.loads(data.getContent().toRawStr())
+                self._namespace.getChild(content['name'])
+            except Exception, e:
+                print("got exception loading json from data packet: "+data.getContent().toRawStr())
+        
 
         @staticmethod
         def _chatTimeout(interest):
             return
 
-        def _messageCacheAppend(self, messageType, message):
+        def _messageCacheAppend(self, name):
             """
             Append a new CachedMessage to messageCache_, using given messageType and
             message, the sequence number from _sync.getSequenceNo() and the current
@@ -204,24 +195,9 @@ class NameSyncHandler(object):
             the size to _maxMessageCacheLength.
             """
             self._messageCache.append(self._CachedMessage(
-              self._sync.getSequenceNo(), messageType, message,
-              self.getNowMilliseconds()))
+              self._sync.getSequenceNo(), name, self.getNowMilliseconds()))
             while len(self._messageCache) > self._maxMessageCacheLength:
               self._messageCache.pop(0)
-
-        @staticmethod
-        def _getRandomString():
-            """
-            Generate a random name for ChronoSync.
-            """
-            seed = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM0123456789"
-            result = ""
-            for i in range(10):
-              # Using % means the distribution isn't uniform, but that's OK.
-              position = random.randrange(256) % len(seed)
-              result += seed[position]
-
-            return result
 
         @staticmethod
         def _dummyOnData(interest, data):
@@ -232,8 +208,7 @@ class NameSyncHandler(object):
             pass
 
         class _CachedMessage(object):
-            def __init__(self, sequenceNo, messageType, message, time):
+            def __init__(self, sequenceNo, name, time):
                 self.sequenceNo = sequenceNo
-                self.messageType = messageType
-                self.message = message
+                self.name = name
                 self.time = time

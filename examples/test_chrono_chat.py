@@ -202,7 +202,7 @@ def main():
                 # We will send the leave message below.
                 break
 
-            namesync.announce(input)
+            namesync.announce(Name(input))
 
         face.processEvents()
         # We need to sleep for a few milliseconds so we don't use 100% of the CPU.
