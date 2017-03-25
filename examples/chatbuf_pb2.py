@@ -13,7 +13,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='chatbuf.proto',
   package='SyncDemo',
-  serialized_pb='\n\rchatbuf.proto\x12\x08SyncDemo\"\xcb\x01\n\x0b\x43hatMessage\x12\n\n\x02to\x18\x01 \x02(\t\x12\x0c\n\x04\x66rom\x18\x02 \x02(\t\x12\x39\n\x04type\x18\x03 \x02(\x0e\x32%.SyncDemo.ChatMessage.ChatMessageType:\x04\x43HAT\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\t\x12\x11\n\ttimestamp\x18\x05 \x02(\x05\"F\n\x0f\x43hatMessageType\x12\x08\n\x04\x43HAT\x10\x00\x12\t\n\x05HELLO\x10\x01\x12\t\n\x05LEAVE\x10\x02\x12\x08\n\x04JOIN\x10\x03\x12\t\n\x05OTHER\x10\x04')
+  serialized_pb='\n\rchatbuf.proto\x12\x08SyncDemo\"\x84\x01\n\x0b\x43hatMessage\x12\x38\n\x04type\x18\x01 \x02(\x0e\x32%.SyncDemo.ChatMessage.ChatMessageType:\x03\x41\x44\x44\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\t\x12\x11\n\ttimestamp\x18\x03 \x02(\x05\"\x1a\n\x0f\x43hatMessageType\x12\x07\n\x03\x41\x44\x44\x10\x00')
 
 
 
@@ -24,30 +24,14 @@ _CHATMESSAGE_CHATMESSAGETYPE = _descriptor.EnumDescriptor(
   file=DESCRIPTOR,
   values=[
     _descriptor.EnumValueDescriptor(
-      name='CHAT', index=0, number=0,
-      options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='HELLO', index=1, number=1,
-      options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='LEAVE', index=2, number=2,
-      options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='JOIN', index=3, number=3,
-      options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='OTHER', index=4, number=4,
+      name='ADD', index=0, number=0,
       options=None,
       type=None),
   ],
   containing_type=None,
   options=None,
-  serialized_start=161,
-  serialized_end=231,
+  serialized_start=134,
+  serialized_end=160,
 )
 
 
@@ -59,36 +43,22 @@ _CHATMESSAGE = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='to', full_name='SyncDemo.ChatMessage.to', index=0,
-      number=1, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='from', full_name='SyncDemo.ChatMessage.from', index=1,
-      number=2, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='type', full_name='SyncDemo.ChatMessage.type', index=2,
-      number=3, type=14, cpp_type=8, label=2,
+      name='type', full_name='SyncDemo.ChatMessage.type', index=0,
+      number=1, type=14, cpp_type=8, label=2,
       has_default_value=True, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='data', full_name='SyncDemo.ChatMessage.data', index=3,
-      number=4, type=9, cpp_type=9, label=1,
+      name='data', full_name='SyncDemo.ChatMessage.data', index=1,
+      number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=unicode("", "utf-8"),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='timestamp', full_name='SyncDemo.ChatMessage.timestamp', index=4,
-      number=5, type=5, cpp_type=1, label=2,
+      name='timestamp', full_name='SyncDemo.ChatMessage.timestamp', index=2,
+      number=3, type=5, cpp_type=1, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -104,7 +74,7 @@ _CHATMESSAGE = _descriptor.Descriptor(
   is_extendable=False,
   extension_ranges=[],
   serialized_start=28,
-  serialized_end=231,
+  serialized_end=160,
 )
 
 _CHATMESSAGE.fields_by_name['type'].enum_type = _CHATMESSAGE_CHATMESSAGETYPE
