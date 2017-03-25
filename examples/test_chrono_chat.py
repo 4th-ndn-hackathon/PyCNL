@@ -162,6 +162,7 @@ class NameSync(object):
             if message.sequenceNo == sequenceNo:
                 if message.messageType == chatbuf_pb2.ChatMessage.ADD:
                     # Use setattr because "from" is a reserved keyword.
+                    content.data = message.message
                     content.type = message.messageType
                     content.timestamp = int(round(message.time / 1000.0))
 
