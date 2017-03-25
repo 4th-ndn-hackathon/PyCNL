@@ -47,13 +47,11 @@ class NameSyncHandler(object):
     def __init__(self, namespace, userPrefix, keyChain, certificateName):
         face = namespace._getFace()
         self.nameSync_ = NameSyncHandler.NameSync(namespace, userPrefix, face, keyChain, certificateName)
+        namespace.addOnNameAdded(self.onNameAdded)
 
-    def announce(self, name):
-        """
-        Send a chat message.
-        """
-        # TODO: Should this instead be triggered when a child is added in the producer app?
-        self.nameSync_.announce(name)
+    def onNameAdded(self, namespace, addedNamespace, callbackId):
+        self.nameSync_.announce(addedNamespace.name)
+
 
     class NameSync(object):
         def __init__(self, namespace, userPrefix, face, keyChain,certificateName):
