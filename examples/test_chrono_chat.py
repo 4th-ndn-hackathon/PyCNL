@@ -38,322 +38,8 @@ from pyndn.security.identity import MemoryPrivateKeyStorage
 from pyndn.security.policy import NoVerifyPolicyManager
 from pyndn.util import Blob
 from pyndn.sync import ChronoSync2013
-
-# Define the Chat class here so that the ChronoChat demo is self-contained.
-class Chat(object):
-    def __init__(self, screenName, chatRoom, hubPrefix, face, keyChain,
-      certificateName):
-        self._screenName = screenName
-        self._chatRoom = chatRoom
-        self._face = face
-        self._keyChain = keyChain
-        self._certificateName = certificateName
-
-        self._messageCache = [] # of CachedMessage
-        self._roster = [] # of str
-        self._maxMessageCacheLength = 100
-        self._isRecoverySyncState = True
-        self._syncLifetime = 5000.0 # milliseconds
-
-        # This should only be called once, so get the random string here.
-        self._chatPrefix = Name(hubPrefix).append(self._chatRoom).append(
-          self._getRandomString())
-        session = int(round(self.getNowMilliseconds() / 1000.0))
-        self._userName = self._screenName + str(session)
-
-        self._sync = ChronoSync2013(
-           self._sendInterest, self._initial, self._chatPrefix,
-           Name("/ndn/broadcast/ChronoChat-0.3").append(self._chatRoom), session,
-           face, keyChain, certificateName, self._syncLifetime,
-           onRegisterFailed)
-
-        face.registerPrefix(self._chatPrefix, self._onInterest, onRegisterFailed)
-
-    def sendMessage(self, chatMessage):
-        """
-        Send a chat message.
-        """
-        if len(self._messageCache) == 0:
-            self._messageCacheAppend(chatbuf_pb2.ChatMessage.JOIN, "xxx")
-
-        # Ignore an empty message.
-        # Forming Sync Data Packet.
-        if chatMessage != "":
-            self._sync.publishNextSequenceNo()
-            self._messageCacheAppend(chatbuf_pb2.ChatMessage.CHAT, chatMessage)
-            print(self._screenName + ": " + chatMessage)
-
-    def leave(self):
-        """
-        Send the leave message and leave.
-        """
-        self._sync.publishNextSequenceNo()
-        self._messageCacheAppend(chatbuf_pb2.ChatMessage.LEAVE, "xxx")
-
-    @staticmethod
-    def getNowMilliseconds():
-        """
-        Get the current time in milliseconds.
-
-        :return: The current time in milliseconds since 1/1/1970, including
-          fractions of a millisecond.
-        :rtype: float
-        """
-        return time.time() * 1000.0
-
-    def _initial(self):
-        """
-        Push the JOIN message in to the messageCache_, update roster
-        and start the heartbeat.
-        """
-        # Set the heartbeat timeout using the Interest timeout mechanism. The
-        # heartbeat() function will call itself again after a timeout.
-        # TODO: Are we sure using a "/local/timeout" interest is the best future call
-        # approach?
-        timeout = Interest(Name("/local/timeout"))
-        timeout.setInterestLifetimeMilliseconds(60000)
-        self._face.expressInterest(timeout, self._dummyOnData, self._heartbeat)
-
-        try:
-           self._roster.index(self._userName)
-        except ValueError:
-            self._roster.append(self._userName)
-            print("Member: " + self._screenName)
-            print(self._screenName + ": Join")
-            self._messageCacheAppend(chatbuf_pb2.ChatMessage.JOIN, "xxx")
-
-    def _sendInterest(self, syncStates, isRecovery):
-        """
-        Send a Chat Interest to fetch chat messages after the user gets the Sync
-        data packet back but will not send interest.
-        """
-        # This is used by _onData to decide whether to display the chat messages.
-        self._isRecoverySyncState = isRecovery
-
-        sendList = []       # of str
-        sessionNoList = []  # of int
-        sequenceNoList = [] # of int
-        for j in range(len(syncStates)):
-            syncState = syncStates[j]
-            nameComponents = Name(syncState.getDataPrefix())
-            tempName = nameComponents.get(-1).toEscapedString()
-            sessionNo = syncState.getSessionNo()
-            if not tempName == self._screenName:
-                index = -1
-                for k in range(len(sendList)):
-                    if sendList[k] == syncState.getDataPrefix():
-                        index = k
-                        break
-
-                if index != -1:
-                    sessionNoList[index] = sessionNo
-                    sequenceNoList[index] = syncState.getSequenceNo()
-                else:
-                    sendList.append(syncState.getDataPrefix())
-                    sessionNoList.append(sessionNo)
-                    sequenceNoList.append(syncState.getSequenceNo())
-
-        for i in range(len(sendList)):
-            uri = (sendList[i] + "/" + str(sessionNoList[i]) + "/" +
-              str(sequenceNoList[i]))
-            interest = Interest(Name(uri))
-            interest.setInterestLifetimeMilliseconds(self._syncLifetime)
-            self._face.expressInterest(interest, self._onData, self._chatTimeout)
-
-    def _onInterest(self, prefix, interest, face, interestFilterId, filter):
-        """
-        Send back a Chat Data Packet which contains the user's message.
-        """
-        content = chatbuf_pb2.ChatMessage()
-        sequenceNo = int(
-          interest.getName().get(self._chatPrefix.size() + 1).toEscapedString())
-        gotContent = False
-        for i in range(len(self._messageCache) - 1, -1, -1):
-            message = self._messageCache[i]
-            if message.sequenceNo == sequenceNo:
-                if message.messageType != chatbuf_pb2.ChatMessage.CHAT:
-                    # Use setattr because "from" is a reserved keyword.
-                    setattr(content, "from", self._screenName)
-                    content.to = self._chatRoom
-                    content.type = message.messageType
-                    content.timestamp = int(round(message.time / 1000.0))
-                else:
-                    setattr(content, "from", self._screenName)
-                    content.to = self._chatRoom
-                    content.type = message.messageType
-                    content.data = message.message
-                    content.timestamp = int(round(message.time / 1000.0))
-
-                gotContent = True
-                break
-
-        if gotContent:
-            # TODO: Check if this works in Python 3.
-            array = content.SerializeToString()
-            data = Data(interest.getName())
-            data.setContent(Blob(array))
-            self._keyChain.sign(data, self._certificateName)
-            try:
-                face.putData(data)
-            except Exception as ex:
-                logging.getLogger(__name__).error(
-                  "Error in transport.send: %s", str(ex))
-                return
-
-    def _onData(self, interest, data):
-        """
-        Process the incoming Chat data.
-        """
-        # TODO: Check if this works in Python 3.
-        content = chatbuf_pb2.ChatMessage()
-        content.ParseFromString(data.getContent().toRawStr())
-
-        if self.getNowMilliseconds() - content.timestamp * 1000.0 < 120000.0:
-            # Use getattr because "from" is a reserved keyword.
-            name = getattr(content, "from")
-            prefix = data.getName().getPrefix(-2).toUri()
-            sessionNo = int(data.getName().get(-2).toEscapedString())
-            sequenceNo = int(data.getName().get(-1).toEscapedString())
-            nameAndSession = name + str(sessionNo)
-
-            l = 0
-            # Update roster.
-            while l < len(self._roster):
-                entry = self._roster[l]
-                tempName = entry[0:len(entry) - 10]
-                tempSessionNo = int(entry[len(entry) - 10:])
-                if (name != tempName and
-                    content.type != chatbuf_pb2.ChatMessage.LEAVE):
-                    l += 1
-                else:
-                    if name == tempName and sessionNo > tempSessionNo:
-                        self._roster[l] = nameAndSession
-                    break
-
-            if l == len(self._roster):
-                self._roster.append(nameAndSession)
-                print(name + ": Join")
-
-            # Set the alive timeout using the Interest timeout mechanism.
-            # TODO: Are we sure using a "/local/timeout" interest is the best
-            # future call approach?
-            timeout = Interest(Name("/local/timeout"))
-            timeout.setInterestLifetimeMilliseconds(120000)
-            self._face.expressInterest(
-              timeout, self._dummyOnData,
-              self._makeAlive(sequenceNo, name, sessionNo, prefix))
-
-            # isRecoverySyncState_ was set by sendInterest.
-            # TODO: If isRecoverySyncState_ changed, this assumes that we won't get
-            #     data from an interest sent before it changed.
-            # Use getattr because "from" is a reserved keyword.
-            if (content.type == chatbuf_pb2.ChatMessage.CHAT and
-                 not self._isRecoverySyncState and
-                 getattr(content, "from") != self._screenName):
-                print(getattr(content, "from") + ": " + content.data)
-            elif content.type == chatbuf_pb2.ChatMessage.LEAVE:
-                # leave message
-                try:
-                    n = self._roster.index(nameAndSession)
-                    if name != self._screenName:
-                        self._roster.pop(n)
-                        print(name + ": Leave")
-                except ValueError:
-                    pass
-
-    @staticmethod
-    def _chatTimeout(interest):
-        print("Timeout waiting for chat data")
-
-    def _heartbeat(self, interest):
-        """
-        This repeatedly calls itself after a timeout to send a heartbeat message
-        (chat message type HELLO). This method has an "interest" argument
-        because we use it as the onTimeout for Face.expressInterest.
-        """
-        if len(self._messageCache) == 0:
-            self._messageCacheAppend(chatbuf_pb2.ChatMessage.JOIN, "xxx")
-
-        self._sync.publishNextSequenceNo()
-        self._messageCacheAppend(chatbuf_pb2.ChatMessage.HELLO, "xxx")
-
-        # Call again.
-        # TODO: Are we sure using a "/local/timeout" interest is the best future call
-        # approach?
-        timeout = Interest(Name("/local/timeout"))
-        timeout.setInterestLifetimeMilliseconds(60000)
-        self._face.expressInterest(timeout, self._dummyOnData, self._heartbeat)
-
-    def _makeAlive(self, tempSequenceNo, name, sessionNo, prefix):
-        """
-        Return a function for onTimeout which calls _alive.
-        """
-        def f(interest):
-            self._alive(interest, tempSequenceNo, name, sessionNo, prefix)
-        return f
-
-    def _alive(self, interest, tempSequenceNo, name, sessionNo, prefix):
-        """
-        This is called after a timeout to check if the user with prefix has a
-        newer sequence number than the given tempSequenceNo. If not, assume the
-        user is idle and remove from the roster and print a leave message. This
-        method has an "interest" argument because we use it as the onTimeout for
-        Face.expressInterest.
-        """
-        sequenceNo = self._sync.getProducerSequenceNo(prefix, sessionNo)
-        nameAndSession = name + sessionNo
-        try:
-            n = self._roster.index(nameAndSession)
-        except ValueError:
-            n = -1
-
-        if sequenceNo != -1 and n >= 0:
-            if tempSequenceNo == sequenceNo:
-                self._roster.pop(n)
-                print(name + ": Leave")
-
-    def _messageCacheAppend(self, messageType, message):
-        """
-        Append a new CachedMessage to messageCache_, using given messageType and
-        message, the sequence number from _sync.getSequenceNo() and the current
-        time. Also remove elements from the front of the cache as needed to keep
-        the size to _maxMessageCacheLength.
-        """
-        self._messageCache.append(self._CachedMessage(
-          self._sync.getSequenceNo(), messageType, message,
-          self.getNowMilliseconds()))
-        while len(self._messageCache) > self._maxMessageCacheLength:
-          self._messageCache.pop(0)
-
-    @staticmethod
-    def _getRandomString():
-        """
-        Generate a random name for ChronoSync.
-        """
-        seed = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM0123456789"
-        result = ""
-        for i in range(10):
-          # Using % means the distribution isn't uniform, but that's OK.
-          position = random.randrange(256) % len(seed)
-          result += seed[position]
-
-        return result
-
-    @staticmethod
-    def _dummyOnData(interest, data):
-        """
-        This is a do-nothing onData for using expressInterest for timeouts.
-        This should never be called.
-        """
-        pass
-
-    class _CachedMessage(object):
-        def __init__(self, sequenceNo, messageType, message, time):
-            self.sequenceNo = sequenceNo
-            self.messageType = messageType
-            self.message = message
-            self.time = time
-
+from pycnl import Namespace
+from pycnl import NameSyncHandler
 
 DEFAULT_RSA_PUBLIC_KEY_DER = bytearray([
     0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
@@ -458,9 +144,6 @@ DEFAULT_RSA_PRIVATE_KEY_DER = bytearray([
     0xcb, 0xea, 0x8f
   ])
 
-def onRegisterFailed(prefix):
-    print("Register failed for prefix " + prefix.toUri())
-
 def promptAndInput(prompt):
     if sys.version_info[0] <= 2:
         return raw_input(prompt)
@@ -472,21 +155,15 @@ def main():
     # logging.getLogger('').addHandler(logging.StreamHandler(sys.stdout))
     # logging.getLogger('').setLevel(logging.INFO)
 
-    screenName = promptAndInput("Enter your chat username: ")
+    userPrefix = promptAndInput("Enter user prefix: ")
 
-    defaultHubPrefix = "ndn/edu/ucla/remap"
-    hubPrefix = promptAndInput("Enter your hub prefix [" + defaultHubPrefix + "]: ")
-    if hubPrefix == "":
-        hubPrefix = defaultHubPrefix
-
-    defaultChatRoom = "ndnchat"
-    chatRoom = promptAndInput("Enter the chatroom name [" + defaultChatRoom + "]: ")
-    if chatRoom == "":
-        chatRoom = defaultChatRoom
+    defaultNamespacePrefix = "com/np"
+    namespacePrefix = promptAndInput("Enter namespace prefix [" + defaultNamespacePrefix + "]: ")
+    if namespacePrefix == "":
+        namespacePrefix = defaultNamespacePrefix
 
     host = "localhost"
-    print("Connecting to " + host + ", Chatroom: " + chatRoom + ", Username: " +
-      screenName)
+    print("Connecting to " + host)
     print("")
 
     # Set up the key chain.
@@ -505,35 +182,30 @@ def main():
       keyName, KeyType.RSA, DEFAULT_RSA_PUBLIC_KEY_DER, DEFAULT_RSA_PRIVATE_KEY_DER)
     face.setCommandSigningInfo(keyChain, certificateName)
 
-    chat = Chat(
-      screenName, chatRoom, Name(hubPrefix), face, keyChain, certificateName)
+    newspaper = Namespace(namespacePrefix)
+    
+    def onNewName(namespace, addedNamespace, callbackId):
+        print("namespace ("+addedNamespace.getName().toUri()+") added to "+namespace.getName().toUri())
+    newspaper.addOnNameAdded(onNewName)
+    newspaper.setFace(face)
+
+    namesync = NameSyncHandler(newspaper, userPrefix, keyChain, certificateName)
 
     # The main loop to process Chat while checking stdin to send a message.
-    print("Enter your chat message. To quit, enter \"leave\" or \"exit\".")
+    print("Enter your namespace update. To quit, enter \"exit\".")
     while True:
         # Set timeout to 0 for an immediate check.
         isReady, _, _ = select.select([sys.stdin], [], [], 0)
         if len(isReady) != 0:
             input = promptAndInput("")
-            if input == "leave" or input == "exit":
+            if input == "exit":
                 # We will send the leave message below.
                 break
 
-            chat.sendMessage(input)
+            namesync.announce(input)
 
         face.processEvents()
         # We need to sleep for a few milliseconds so we don't use 100% of the CPU.
-        time.sleep(0.01)
-
-    # The user entered the command to leave.
-    chat.leave()
-    # Wait a little bit to allow other applications to fetch the leave message.
-    startTime = Chat.getNowMilliseconds()
-    while True:
-        if Chat.getNowMilliseconds() - startTime >= 1000.0:
-            break
-
-        face.processEvents()
         time.sleep(0.01)
 
 main()

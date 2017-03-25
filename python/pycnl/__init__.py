@@ -27,6 +27,7 @@ try:
     from pycnl.namespace import *
     from pycnl.segment_stream import *
     from pycnl.segmented_content import *
+    from pycnl.name_sync_handler import *
 except ImportError:
     del _sys.modules[__name__]
     raise
