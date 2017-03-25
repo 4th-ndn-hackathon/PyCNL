@@ -41,6 +41,12 @@ from pyndn.sync import ChronoSync2013
 from pycnl import Namespace, SegmentStream, SegmentedContent
 from pycnl import NameSyncHandler
 
+# for GUI support
+from Tkinter import *   
+from PIL import Image, ImageTk
+from threading import Thread
+import io
+
 DEFAULT_RSA_PUBLIC_KEY_DER = bytearray([
     0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
     0x01, 0x05, 0x00, 0x03, 0x82, 0x01, 0x0f, 0x00, 0x30, 0x82, 0x01, 0x0a, 0x02, 0x82, 0x01, 0x01,
@@ -156,6 +162,35 @@ def promptAndInput(prompt):
     else:
         return input(prompt)
 
+root = None
+imagePanel = None
+labelPanel = None
+
+def runGui(processCallback, leftPressed, rightPressed):
+    global root, imagePanel, labelPanel
+    root = Tk()
+    root.after(100, processCallback)
+    imagePanel = Label(root)
+    imagePanel.pack()
+    labelPanel = Label(root, text="")
+    labelPanel.pack()
+    root.bind("<Left>", leftPressed)
+    root.bind("<Right>", rightPressed)
+    root.mainloop()
+
+def stopGui():
+    root.destroy()
+    root = None
+
+def displayImage(image_data, caption):
+    global root, imagePanel, labelPanel
+    image = Image.open("test.jpg")
+    # image = Image.open(io.BytesIO(image_data))
+    photo = ImageTk.PhotoImage(image)  
+    imagePanel.configure(image=photo)
+    imagePanel.image = photo
+    labelPanel.configure(text=caption)
+
 def main():
     # Uncomment these lines to print ChronoSync debug messages.
     # logging.getLogger('').addHandler(logging.StreamHandler(sys.stdout))
@@ -209,19 +244,29 @@ def main():
 
     # The main loop to process Chat while checking stdin to send a message.
     print("Enter your namespace update. To quit, enter \"exit\".")
-    while True:
+
+    def process():
+        # while True:
         # Set timeout to 0 for an immediate check.
         isReady, _, _ = select.select([sys.stdin], [], [], 0)
         if len(isReady) != 0:
             input = promptAndInput("")
             if input == "exit":
+                stopGui()
                 # We will send the leave message below.
-                break
-
+                # break
             namesync.announce(Name(input))
-
+            displayImage(None, "random caption")
         face.processEvents()
-        # We need to sleep for a few milliseconds so we don't use 100% of the CPU.
-        time.sleep(0.01)
+        if root: 
+            root.after(100, process)
+
+    def leftKey(event):
+        print "Left key pressed"
+
+    def rightKey(event):
+        print "Right key pressed"
+
+    runGui(process, leftKey, rightKey)
 
 main()
