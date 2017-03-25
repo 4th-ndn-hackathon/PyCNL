@@ -23,6 +23,8 @@ the NameSync protocol to add announced names to a NameSpace object.
 """
 
 import logging
+import chatbuf_pb2
+import time
 from pyndn.sync import ChronoSync2013
 from pyndn import Name
 from pyndn import Interest
@@ -44,7 +46,7 @@ class NameSyncHandler(object):
     """
     def __init__(self, namespace, userPrefix, keyChain, certificateName):
         face = namespace._getFace()
-        self.nameSync_ = NameSync(namespace, userPrefix, face, keyChain, certificateName)
+        self.nameSync_ = NameSyncHandler.NameSync(namespace, userPrefix, face, keyChain, certificateName)
 
     def announce(self, name):
         """
@@ -55,7 +57,6 @@ class NameSyncHandler(object):
 
     class NameSync(object):
         def __init__(self, namespace, userPrefix, face, keyChain,certificateName):
-        # def __init__(self, screenName, chatRoom, hubPrefix, face, keyChain,certificateName):
             self._namespace = namespace
             self._namespacePrefix = namespace.getName()
             self._userPrefix = userPrefix
@@ -72,16 +73,14 @@ class NameSyncHandler(object):
                self._sendInterest, self._initial, Name(userPrefix),
                Name("/ndn/broadcast/namesync").append(self._namespacePrefix), 0,
                face, keyChain, certificateName, self._syncLifetime,
-               onRegisterFailed)
+               self._onRegisterFailed)
 
-            face.registerPrefix(self._userPrefix, self._onInterest, onRegisterFailed)
+            face.registerPrefix(self._userPrefix, self._onInterest, self._onRegisterFailed)
 
         def announce(self, name):
             """
             Send a chat message.
             """
-            # if len(self._messageCache) == 0:
-            #     self._messageCacheAppend(chatbuf_pb2.ChatMessage.JOIN, "xxx")
 
             # Ignore an empty message.
             # Forming Sync Data Packet.
@@ -101,26 +100,10 @@ class NameSyncHandler(object):
             """
             return time.time() * 1000.0
 
-        def _initial(self):
-            """
-            Push the JOIN message in to the messageCache_, update roster
-            and start the heartbeat.
-            """
-            # Set the heartbeat timeout using the Interest timeout mechanism. The
-            # heartbeat() function will call itself again after a timeout.
-            # TODO: Are we sure using a "/local/timeout" interest is the best future call
-            # approach?
-            # timeout = Interest(Name("/local/timeout"))
-            # timeout.setInterestLifetimeMilliseconds(60000)
-            # self._face.expressInterest(timeout, self._dummyOnData, self._heartbeat)
+        def _onRegisterFailed(prefix):
+            print("Register failed for prefix " + prefix.toUri())
 
-            # try:
-            #    self._roster.index(self._userName)
-            # except ValueError:
-            #     self._roster.append(self._userName)
-            #     print("Member: " + self._screenName)
-            #     print(self._screenName + ": Join")
-            #     self._messageCacheAppend(chatbuf_pb2.ChatMessage.JOIN, "xxx")
+        def _initial(self):
             return
 
         def _sendInterest(self, syncStates, isRecovery):
@@ -201,112 +184,17 @@ class NameSyncHandler(object):
             # TODO: Check if this works in Python 3.
             content = chatbuf_pb2.ChatMessage()
             content.ParseFromString(data.getContent().toRawStr())
+            prefix = data.getName().getPrefix(-2).toUri()
+            sessionNo = int(data.getName().get(-2).toEscapedString())
+            sequenceNo = int(data.getName().get(-1).toEscapedString())
 
-            if True:# self.getNowMilliseconds() - content.timestamp * 1000.0 < 120000.0:
-                # Use getattr because "from" is a reserved keyword.
-                # name = getattr(content, "from")
-                prefix = data.getName().getPrefix(-2).toUri()
-                sessionNo = int(data.getName().get(-2).toEscapedString())
-                sequenceNo = int(data.getName().get(-1).toEscapedString())
-
-                # l = 0
-                # Update roster.
-                # while l < len(self._roster):
-                #     entry = self._roster[l]
-                #     tempName = entry[0:len(entry) - 10]
-                #     tempSessionNo = int(entry[len(entry) - 10:])
-                #     if (name != tempName and
-                #         content.type != chatbuf_pb2.ChatMessage.LEAVE):
-                #         l += 1
-                #     else:
-                #         if name == tempName and sessionNo > tempSessionNo:
-                #             self._roster[l] = nameAndSession
-                #         break
-
-                # if l == len(self._roster):
-                #     self._roster.append(nameAndSession)
-                #     print(name + ": Join")
-
-                # Set the alive timeout using the Interest timeout mechanism.
-                # TODO: Are we sure using a "/local/timeout" interest is the best
-                # future call approach?
-                # timeout = Interest(Name("/local/timeout"))
-                # timeout.setInterestLifetimeMilliseconds(120000)
-                # self._face.expressInterest(
-                #   timeout, self._dummyOnData,
-                #   self._makeAlive(sequenceNo, name, sessionNo, prefix))
-
-                # isRecoverySyncState_ was set by sendInterest.
-                # TODO: If isRecoverySyncState_ changed, this assumes that we won't get
-                #     data from an interest sent before it changed.
-                # Use getattr because "from" is a reserved keyword.
-
-                # if (content.type == chatbuf_pb2.ChatMessage.ADD and not self._isRecoverySyncState):
-                if (content.type == chatbuf_pb2.ChatMessage.ADD):
-                    print("got: "+content.data)
-                    self._namespace.getChild(content.data)
-                    # print(getattr(content, "from") + ": " + content.data)
-                # elif content.type == chatbuf_pb2.ChatMessage.LEAVE:
-                #     # leave message
-                #     try:
-                #         n = self._roster.index(nameAndSession)
-                #         if name != self._screenName:
-                #             self._roster.pop(n)
-                #             print(name + ": Leave")
-                #     except ValueError:
-                #         pass
+            if (content.type == chatbuf_pb2.ChatMessage.ADD):
+                print("got: "+content.data)
+                self._namespace.getChild(content.data)
 
         @staticmethod
         def _chatTimeout(interest):
-            # print("Timeout waiting for chat data")
             return
-
-        # def _heartbeat(self, interest):
-            # """
-            # This repeatedly calls itself after a timeout to send a heartbeat message
-            # (chat message type HELLO). This method has an "interest" argument
-            # because we use it as the onTimeout for Face.expressInterest.
-            # """
-            # if len(self._messageCache) == 0:
-            #     self._messageCacheAppend(chatbuf_pb2.ChatMessage.JOIN, "xxx")
-
-            # self._sync.publishNextSequenceNo()
-            # self._messageCacheAppend(chatbuf_pb2.ChatMessage.HEARTBEAT, "xxx")
-
-            # Call again.
-            # TODO: Are we sure using a "/local/timeout" interest is the best future call
-            # approach?
-            # timeout = Interest(Name("/local/timeout"))
-            # timeout.setInterestLifetimeMilliseconds(60000)
-            # self._face.expressInterest(timeout, self._dummyOnData, self._heartbeat)
-
-        # def _makeAlive(self, tempSequenceNo, name, sessionNo, prefix):
-        #     """
-        #     Return a function for onTimeout which calls _alive.
-        #     """
-        #     def f(interest):
-        #         self._alive(interest, tempSequenceNo, name, sessionNo, prefix)
-        #     return f
-
-        # def _alive(self, interest, tempSequenceNo, name, sessionNo, prefix):
-        #     """
-        #     This is called after a timeout to check if the user with prefix has a
-        #     newer sequence number than the given tempSequenceNo. If not, assume the
-        #     user is idle and remove from the roster and print a leave message. This
-        #     method has an "interest" argument because we use it as the onTimeout for
-        #     Face.expressInterest.
-        #     """
-        #     sequenceNo = self._sync.getProducerSequenceNo(prefix, sessionNo)
-        #     nameAndSession = name + sessionNo
-        #     try:
-        #         n = self._roster.index(nameAndSession)
-        #     except ValueError:
-        #         n = -1
-
-        #     if sequenceNo != -1 and n >= 0:
-        #         if tempSequenceNo == sequenceNo:
-        #             self._roster.pop(n)
-        #             print(name + ": Leave")
 
         def _messageCacheAppend(self, messageType, message):
             """
