@@ -178,7 +178,7 @@ class NameSyncHandler(object):
             # TODO: Check if this works in Python 3.
             try:
                 content = json.loads(data.getContent().toRawStr())
-                self._namespace.getChild(content['name'])
+                self._namespace.getChild(Name(content['name']))
             except Exception, e:
                 print("got exception loading json from data packet: "+data.getContent().toRawStr())
         

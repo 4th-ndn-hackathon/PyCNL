@@ -162,7 +162,7 @@ def main():
     if namespacePrefix == "":
         namespacePrefix = defaultNamespacePrefix
 
-    host = "localhost"
+    host = "memoria.ndn.ucla.edu" #"localhost"
     print("Connecting to " + host)
     print("")
 
