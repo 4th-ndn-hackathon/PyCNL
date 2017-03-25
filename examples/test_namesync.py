@@ -38,7 +38,7 @@ from pyndn.security.identity import MemoryPrivateKeyStorage
 from pyndn.security.policy import NoVerifyPolicyManager
 from pyndn.util import Blob
 from pyndn.sync import ChronoSync2013
-from pycnl import Namespace
+from pycnl import Namespace, SegmentStream, SegmentedContent
 from pycnl import NameSyncHandler
 
 DEFAULT_RSA_PUBLIC_KEY_DER = bytearray([
@@ -144,6 +144,12 @@ DEFAULT_RSA_PRIVATE_KEY_DER = bytearray([
     0xcb, 0xea, 0x8f
   ])
 
+def dump(*list):
+    result = ""
+    for element in list:
+        result += (element if type(element) is str else str(element)) + " "
+    print(result)
+
 def promptAndInput(prompt):
     if sys.version_info[0] <= 2:
         return raw_input(prompt)
@@ -186,7 +192,7 @@ def main():
     
     def onContentSet(namespace, contentNamespace, callbackId):
         if contentNamespace == namespace:
-            dump("Got segmented content size", contentNamespace.content.size())
+            dump("Got segmented content ", contentNamespace.content.toRawStr())
 
     def onNewName(namespace, addedNamespace, callbackId):
         print("namespace ("+addedNamespace.getName().toUri()+") added to "+namespace.getName().toUri())
@@ -194,8 +200,7 @@ def main():
             segmentStream = SegmentStream(addedNamespace)
             SegmentedContent(segmentStream)
             segmentStream.start()
-            addedNamespace.onContentSet(onContentSet)
-            
+            addedNamespace.addOnContentSet(onContentSet)
 
     newspaper.addOnNameAdded(onNewName)
     newspaper.setFace(face)
