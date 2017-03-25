@@ -228,7 +228,8 @@ class NameSync(object):
             #     data from an interest sent before it changed.
             # Use getattr because "from" is a reserved keyword.
 
-            if (content.type == chatbuf_pb2.ChatMessage.ADD and not self._isRecoverySyncState):
+            # if (content.type == chatbuf_pb2.ChatMessage.ADD and not self._isRecoverySyncState):
+            if (content.type == chatbuf_pb2.ChatMessage.ADD):
                 print("got: "+content.data)
                 self._namespace.getChild(content.data)
                 # print(getattr(content, "from") + ": " + content.data)
