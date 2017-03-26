@@ -262,7 +262,7 @@ def main():
                 # break
 
             # before producer has namespace.publish call, we manually call onNameAdded as a hack to publish
-            namesync.onNameAdded(None, Namespace(Name(input)), 0)
+            namesync.onNameAdded(None, Namespace(Name(input)), 0, True)
             # displayImage(None, "random caption")
         face.processEvents()
         if root: 
