@@ -23,7 +23,7 @@ This tests updating a namespace based on segmented content.
 
 import time
 from pyndn import Face
-from pycnl import Namespace, SegmentStream, SegmentedContent
+from pycnl import Namespace, SegmentedContent
 
 def dump(*list):
     result = ""
@@ -42,10 +42,7 @@ def main():
             dump("Got segmented content size", contentNamespace.content.size())
             enabled[0] = False
     page.addOnContentSet(onContentSet)
-
-    segmentStream = SegmentStream(page)
-    SegmentedContent(segmentStream)
-    segmentStream.start()
+    SegmentedContent(page).start()
 
     # Loop calling processEvents until a callback sets enabled[0] = False.
     while enabled[0]:
