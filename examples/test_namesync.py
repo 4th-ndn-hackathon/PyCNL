@@ -165,6 +165,7 @@ def promptAndInput(prompt):
 root = None
 imagePanel = None
 labelPanel = None
+currentSlideName = None
 
 def runGui(processCallback, leftPressed, rightPressed):
     global root, imagePanel, labelPanel
@@ -230,15 +231,16 @@ def main():
     newspaper = Namespace(namespacePrefix)
     
     def onContentSet(namespace, contentNamespace, callbackId):
+        global currentSlideName
         if contentNamespace == namespace:
             print("content size "+str(contentNamespace.content.size()))
+            currentSlideName = contentNamespace.getName()
             displayImage(contentNamespace.content.toRawStr(), contentNamespace.getName().toUri())
             # dump("Got segmented content ", contentNamespace.content.toRawStr())
 
     def onNewName(namespace, addedNamespace, callbackId):
         print("namespace ("+addedNamespace.getName().toUri()+") added to "+namespace.getName().toUri())
         if addedNamespace.getName().get(-1).isSegment() and addedNamespace.getName().get(-1).toSegment() == 0:
-            print("start fetching segments")
             addedNamespace.getParent().addOnContentSet(onContentSet)
             SegmentedContent(addedNamespace.getParent()).start()
 
@@ -268,10 +270,32 @@ def main():
             root.after(100, process)
 
     def leftKey(event):
-        print "Left key pressed"
+        global currentSlideName
+        allVersions = newspaper.getChildComponents()
+        currentVersion = currentSlideName[-1]
+        selected = allVersions[0]
+        for c in allVersions:
+            print(str(c.toVersion()))
+            if c.toVersion() == currentVersion.toVersion():
+                break
+            selected = c
+        currentSlideName = Name(newspaper.getName()).append(selected)
+        displayImage(newspaper.getChild(selected).content.toRawStr(), currentSlideName.toUri())
 
     def rightKey(event):
-        print "Right key pressed"
+        global currentSlideName
+        allVersions = newspaper.getChildComponents()
+        currentVersion = currentSlideName[-1]
+        selected = None
+        for c in allVersions[::-1]:
+            if c.toVersion() == currentVersion.toVersion():
+                break
+            selected = c
+        if selected:
+            currentSlideName = Name(newspaper.getName()).append(selected)
+            displayImage(newspaper.getChild(selected).content.toRawStr(), currentSlideName.toUri())
+        else:
+            print("no slides to show")
 
     runGui(process, leftKey, rightKey)
 
