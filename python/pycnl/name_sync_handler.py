@@ -44,7 +44,6 @@ class NameSyncHandler(object):
     def onNameAdded(self, namespace, addedNamespace, callbackId):
         self.nameSync_.announce(addedNamespace.name)
 
-
     class NameSync(object):
         def __init__(self, namespace, userPrefix, face, keyChain,certificateName):
             self._namespace = namespace
@@ -145,7 +144,8 @@ class NameSyncHandler(object):
                 message = self._messageCache[i]
                 if message.sequenceNo == sequenceNo:
                     # Use setattr because "from" is a reserved keyword.
-                    content = json.dumps({'name':message.name.toUri(), 
+                    # For now we have one message only...
+                    content = json.dumps({'name':[message.name.toUri()], 
                         'timestamp':int(round(message.time / 1000.0))})
                 gotContent = True
                 break
@@ -169,7 +169,8 @@ class NameSyncHandler(object):
             # TODO: Check if this works in Python 3.
             try:
                 content = json.loads(data.getContent().toRawStr())
-                self._namespace.getChild(Name(content['name']))
+                for item in content['name']:
+                    self._namespace.getChild(Name(item))
             except Exception, e:
                 print("got exception loading json from data packet: "+data.getContent().toRawStr())
         

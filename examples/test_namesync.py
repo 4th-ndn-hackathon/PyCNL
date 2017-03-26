@@ -260,8 +260,10 @@ def main():
                 stopGui()
                 # We will send the leave message below.
                 # break
-            namesync.announce(Name(input))
-            displayImage(None, "random caption")
+
+            # before producer has namespace.publish call, we manually call onNameAdded as a hack to publish
+            namesync.onNameAdded(None, Namespace(Name(input)), 0)
+            # displayImage(None, "random caption")
         face.processEvents()
         if root: 
             root.after(100, process)
