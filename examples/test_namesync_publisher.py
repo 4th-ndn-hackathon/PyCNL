@@ -230,6 +230,7 @@ def main():
 
     folder = promptAndInput("Enter folder with images: ")
     imageFiles = glob.glob(folder+'/*.jpg')
+    imageFiles.sort()
     print("loaded "+str(len(imageFiles))+" images")
 
     idx = 0
