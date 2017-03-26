@@ -26,6 +26,8 @@ from pyndn import Data
 from pyndn import Face
 from pyndn.security import KeyChain
 from pyndn.util import MemoryContentCache
+from pycnl import NameSyncHandler
+from pycnl import Namespace
 
 def dump(*list):
     result = ""
@@ -33,23 +35,6 @@ def dump(*list):
         result += (element if type(element) is str else str(element)) + " "
     print(result)
 
-class Echo(object):
-    def __init__(self, keyChain, certificateName):
-        self._keyChain = keyChain
-        self._certificateName = certificateName
-        self._responseCount = 0
-
-    def onInterest(self, prefix, interest, face, interestFilterId, filter):
-        self._responseCount += 1
-
-        # Make and sign a Data packet.
-        data = Data(interest.getName())
-        content = "Echo " + interest.getName().toUri()
-        data.setContent(content)
-        self._keyChain.sign(data, self._certificateName)
-
-        dump("Sent content", content)
-        face.putData(data)
 
 def onRegisterFailed(prefix):
     dump("Register failed for prefix", prefix.toUri())
@@ -60,7 +45,7 @@ def promptAndInput(prompt):
     else:
         return input(prompt)
 
-def publishNewVersion(name,content,currVer,memcc,keyChain):
+def publishNewVersion(name,content,currVer,memcc,keyChain,namespace):
     data = Data(Name(name))
     data.getName().appendVersion(currVer)
     data.getName().appendSegment(0)
@@ -70,23 +55,29 @@ def publishNewVersion(name,content,currVer,memcc,keyChain):
     keyChain.sign(data, keyChain.getDefaultCertificateName())
 
     memcc.add(data)
+    namespace.getChild(data.getName().getPrefix(-1))
     # dump("Sent content", content)
     print("Published "+str(data.getContent().size())+" bytes, name "+data.getName().toUri())
-
+    
 
 def main():
     currVer=1
     # name="/com/newspaper/sport/superbowl2017.html"
     name="/ndn/hackathon/cnl-demo/slides"
+    usrPrefix = Name("/com/newspaper/USER/alice")
     # The default Face will connect using a Unix socket, or to "localhost".
     face = Face("memoria.ndn.ucla.edu")
 
+    namespace = Namespace(name)
+    namespace.setFace(face)
     # Use the system default key chain and certificate name to sign commands.
     keyChain = KeyChain()
     face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName())
 
+    NameSyncHandler(namespace,usrPrefix,keyChain,keyChain.getDefaultCertificateName())
+
     # Also use the default certificate name to sign data packets.
-    #echo = Echo(keyChain, keyChain.getDefaultCertificateName())
+
     memcc=MemoryContentCache(face)
     prefix = Name("/com/newspaper")
     dump("Register prefix", prefix.toUri())
@@ -106,7 +97,7 @@ def main():
             promptAndInput("")
             with open(imageFiles[idx],"rb") as f:
                 content = f.read(7500)
-                publishNewVersion(name, content, idx+1, memcc, keyChain)
+                publishNewVersion(name, content, idx+1, memcc, keyChain, namespace)
             idx += 1
             run = idx < len(imageFiles)
 

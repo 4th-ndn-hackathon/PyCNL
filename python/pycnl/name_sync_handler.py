@@ -25,18 +25,10 @@ the NameSync protocol to add announced names to a NameSpace object.
 import logging
 import time
 import json
+
+from pyndn import Name, Interest, Data, Face
 from pyndn.sync import ChronoSync2013
-from pyndn import Name
-from pyndn import Interest
-from pyndn import Data
-from pyndn import Face
-from pyndn.security import KeyType
 from pyndn.security import KeyChain
-from pyndn.security.identity import IdentityManager
-from pyndn.security.identity import MemoryIdentityStorage
-from pyndn.security.identity import MemoryPrivateKeyStorage
-from pyndn.security.policy import NoVerifyPolicyManager
-from pyndn.util import Blob
 
 class NameSyncHandler(object):
     """
@@ -47,13 +39,11 @@ class NameSyncHandler(object):
     def __init__(self, namespace, userPrefix, keyChain, certificateName):
         face = namespace._getFace()
         self.nameSync_ = NameSyncHandler.NameSync(namespace, userPrefix, face, keyChain, certificateName)
+        namespace.addOnNameAdded(self.onNameAdded)
 
-    def announce(self, name):
-        """
-        Send a chat message.
-        """
-        # TODO: Should this instead be triggered when a child is added in the producer app?
-        self.nameSync_.announce(name)
+    def onNameAdded(self, namespace, addedNamespace, callbackId):
+        self.nameSync_.announce(addedNamespace.name)
+
 
     class NameSync(object):
         def __init__(self, namespace, userPrefix, face, keyChain,certificateName):
