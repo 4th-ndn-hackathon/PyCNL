@@ -149,7 +149,7 @@ class NameSyncHandler(object):
                 if message.sequenceNo == sequenceNo:
                     # Use setattr because "from" is a reserved keyword.
                     # For now we have one message only...
-                    content = json.dumps({'name':[message.name.toUri()], 
+                    content = json.dumps({'names':[message.name.toUri()],
                         'timestamp':int(round(message.time / 1000.0))})
                 gotContent = True
                 break
@@ -177,7 +177,7 @@ class NameSyncHandler(object):
                 try:
                     # Set this False to prevent onNameAdded from re-announcing.
                     self.enableAnnounce_ = False
-                    for item in content['name']:
+                    for item in content['names']:
                         self._namespace.getChild(Name(item))
                 finally:
                     self.enableAnnounce_ = True
