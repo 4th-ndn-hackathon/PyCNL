@@ -156,21 +156,42 @@ def promptAndInput(prompt):
     else:
         return input(prompt)
 
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
 def publishNewVersion(name,content,currVer,memcc,keyChain,certificateName,namespace):
-    data = Data(Name(name))
-    data.getName().appendVersion(currVer)
-    data.getName().appendSegment(0)
-    data.getMetaInfo().setFinalBlockId(data.getName().get(-1))
+    dataName = Name(name)
+    dataName.appendVersion(currVer)
 
-    data.setContent(content)
-    keyChain.sign(data, certificateName)
-
-    memcc.add(data)
-    namespace.getChild(data.getName().getPrefix(-1))
-    # dump("Sent content", content)
-    print("Published "+str(data.getContent().size())+" bytes, name "+data.getName().toUri())
+    # segmenter!
+    allChunks = []
+    if len(content) >= 7500:
+        for chunk in chunks(content, 7500):
+            allChunks.append(chunk)
+        idx = 0
+        print("sliced into "+str(len(allChunks))+" chunks")
+        for chunk in allChunks:
+            segmentName = Name(dataName)
+            data = Data(Name(dataName).appendSegment(idx))
+            data.setContent(chunk)
+            data.getMetaInfo().setFinalBlockId(Name().appendSegment(len(allChunks)-1)[0])
+            keyChain.sign(data, certificateName)
+            memcc.add(data)
+            namespace.getChild(data.getName().getPrefix(-1))
+            idx += 1
+            print("Published "+str(data.getContent().size())+" bytes, name "+data.getName().toUri())
+    else:
+        data = Data(Name(dataName).appendSegment(0))
+        data.setContent(content)
+        data.getMetaInfo().setFinalBlockId(data.getName().get(-1))
+        keyChain.sign(data, certificateName)
+        memcc.add(data)
+        namespace.getChild(data.getName().getPrefix(-1))
+        # dump("Sent content", content)
+        print("Published "+str(data.getContent().size())+" bytes, name "+data.getName().toUri())
     
-
 def main():
     currVer=1
     # name="/com/newspaper/sport/superbowl2017.html"
@@ -179,7 +200,7 @@ def main():
     usrPrefix = Name("/com/newspaper/USER/alice/" + str(random.getrandbits(16)))
     print("User prefix : " + usrPrefix.toUri())
     # The default Face will connect using a Unix socket, or to "localhost".
-    face = Face("memoria.ndn.ucla.edu")
+    face = Face("localhost") #Face("memoria.ndn.ucla.edu")
 
     namespace = Namespace(name)
     namespace.setFace(face)
