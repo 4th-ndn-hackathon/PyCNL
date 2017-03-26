@@ -25,18 +25,10 @@ the NameSync protocol to add announced names to a NameSpace object.
 import logging
 import time
 import json
+
+from pyndn import Name, Interest, Data, Face
 from pyndn.sync import ChronoSync2013
-from pyndn import Name
-from pyndn import Interest
-from pyndn import Data
-from pyndn import Face
-from pyndn.security import KeyType
 from pyndn.security import KeyChain
-from pyndn.security.identity import IdentityManager
-from pyndn.security.identity import MemoryIdentityStorage
-from pyndn.security.identity import MemoryPrivateKeyStorage
-from pyndn.security.policy import NoVerifyPolicyManager
-from pyndn.util import Blob
 
 class NameSyncHandler(object):
     """
@@ -49,12 +41,13 @@ class NameSyncHandler(object):
         self.nameSync_ = NameSyncHandler.NameSync(namespace, userPrefix, face, keyChain, certificateName)
         namespace.addOnNameAdded(self.onNameAdded)
 
-    def onNameAdded(self, namespace, addedNamespace, callbackId):
-        self.nameSync_.announce(addedNamespace.name)
-
+    def onNameAdded(self, namespace, addedNamespace, callbackId, doAnnounce = True):
+        # we don't announce the names we received via sync, we only announce the ones we actually publish 
+        if doAnnounce:
+            self.nameSync_.announce(addedNamespace.name)
 
     class NameSync(object):
-        def __init__(self, namespace, userPrefix, face, keyChain,certificateName):
+        def __init__(self, namespace, userPrefix, face, keyChain, certificateName):
             self._namespace = namespace
             self._namespacePrefix = namespace.getName()
             self._userPrefix = userPrefix
@@ -66,6 +59,7 @@ class NameSyncHandler(object):
             self._maxMessageCacheLength = 100
             self._isRecoverySyncState = False
             self._syncLifetime = 5000.0 # milliseconds
+            self._namespaceMessageFreshnessPeriod = 4000.0
 
             self._sync = ChronoSync2013(
                self._sendInterest, self._initial, Name(userPrefix),
@@ -148,11 +142,13 @@ class NameSyncHandler(object):
             """
             sequenceNo = int(interest.getName()[-1].toEscapedString())
             gotContent = False
+            content = None
             for i in range(len(self._messageCache) - 1, -1, -1):
                 message = self._messageCache[i]
                 if message.sequenceNo == sequenceNo:
                     # Use setattr because "from" is a reserved keyword.
-                    content = json.dumps({'name':message.name.toUri(), 
+                    # For now we have one message only...
+                    content = json.dumps({'name':[message.name.toUri()], 
                         'timestamp':int(round(message.time / 1000.0))})
                 gotContent = True
                 break
@@ -161,6 +157,7 @@ class NameSyncHandler(object):
                 # TODO: Check if this works in Python 3.
                 data = Data(interest.getName())
                 data.setContent(content)
+                data.getMetaInfo().setFreshnessPeriod(self._namespaceMessageFreshnessPeriod)
                 self._keyChain.sign(data, self._certificateName)
                 try:
                     face.putData(data)
@@ -176,7 +173,8 @@ class NameSyncHandler(object):
             # TODO: Check if this works in Python 3.
             try:
                 content = json.loads(data.getContent().toRawStr())
-                self._namespace.getChild(Name(content['name']))
+                for item in content['name']:
+                    self._namespace.getChild(Name(item))
             except Exception, e:
                 print("got exception loading json from data packet: "+data.getContent().toRawStr())
         
