@@ -148,6 +148,7 @@ class NameSyncHandler(object):
             """
             sequenceNo = int(interest.getName()[-1].toEscapedString())
             gotContent = False
+            content = None
             for i in range(len(self._messageCache) - 1, -1, -1):
                 message = self._messageCache[i]
                 if message.sequenceNo == sequenceNo:
