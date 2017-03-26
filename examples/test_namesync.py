@@ -196,9 +196,14 @@ def main():
     # logging.getLogger('').addHandler(logging.StreamHandler(sys.stdout))
     # logging.getLogger('').setLevel(logging.INFO)
 
-    userPrefix = promptAndInput("Enter user prefix: ")
 
-    defaultNamespacePrefix = "com/np"
+
+    defaultUserPrefix = "com/newspaper/USER/bob"
+    userPrefix = promptAndInput("Enter user prefix: [" + defaultUserPrefix + "]")
+    if userPrefix == "":
+        userPrefix = defaultUserPrefix
+
+    defaultNamespacePrefix = "com/newspaper"
     namespacePrefix = promptAndInput("Enter namespace prefix [" + defaultNamespacePrefix + "]: ")
     if namespacePrefix == "":
         namespacePrefix = defaultNamespacePrefix
