@@ -207,7 +207,7 @@ def main():
     if namespacePrefix == "":
         namespacePrefix = defaultNamespacePrefix
 
-    host = "memoria.ndn.ucla.edu"
+    host = "localhost" #"memoria.ndn.ucla.edu"
     print("Connecting to " + host)
     print("")
 
@@ -239,10 +239,8 @@ def main():
         print("namespace ("+addedNamespace.getName().toUri()+") added to "+namespace.getName().toUri())
         if not addedNamespace.getName().get(-1).isSegment():
             print("start fetching segments")
-            segmentStream = SegmentStream(addedNamespace)
-            SegmentedContent(segmentStream)
-            segmentStream.start()
             addedNamespace.addOnContentSet(onContentSet)
+            SegmentedContent(addedNamespace).start()
 
     newspaper.addOnNameAdded(onNewName)
     newspaper.setFace(face)
