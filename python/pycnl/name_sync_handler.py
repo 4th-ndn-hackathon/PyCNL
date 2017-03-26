@@ -41,7 +41,7 @@ class NameSyncHandler(object):
         self.nameSync_ = NameSyncHandler.NameSync(namespace, userPrefix, face, keyChain, certificateName)
         namespace.addOnNameAdded(self.onNameAdded)
 
-    def onNameAdded(self, namespace, addedNamespace, callbackId, doAnnounce = False):
+    def onNameAdded(self, namespace, addedNamespace, callbackId, doAnnounce = True):
         # we don't announce the names we received via sync, we only announce the ones we actually publish 
         if doAnnounce:
             self.nameSync_.announce(addedNamespace.name)
