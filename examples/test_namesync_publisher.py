@@ -22,6 +22,7 @@ import select
 import sys
 import glob
 import random
+import datetime
 
 from pyndn import Name
 from pyndn import Data
@@ -180,7 +181,6 @@ def publishNewVersion(name,content,memcc,keyChain,certificateName,namespace):
             keyChain.sign(data, certificateName)
             memcc.add(data)
             if idx == 0:
-                print("ADD CHILD")
                 namespace.getChild(data.getName())
             idx += 1
             print("Published "+str(data.getContent().size())+" bytes, name "+data.getName().toUri())
@@ -243,7 +243,7 @@ def main():
                 print('will publish image '+imageFiles[idx])
                 with open(imageFiles[idx],"rb") as f:
                     content = f.read()
-                    publishNewVersion(name, content, idx+1, memcc, keyChain, certificateName, namespace)
+                    publishNewVersion(name, content, memcc, keyChain, certificateName, namespace)
                 idx += 1
             # run = idx < len(imageFiles)
 
