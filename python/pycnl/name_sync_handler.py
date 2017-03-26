@@ -25,18 +25,10 @@ the NameSync protocol to add announced names to a NameSpace object.
 import logging
 import time
 import json
+
+from pyndn import Name, Interest, Data, Face
 from pyndn.sync import ChronoSync2013
-from pyndn import Name
-from pyndn import Interest
-from pyndn import Data
-from pyndn import Face
-from pyndn.security import KeyType
 from pyndn.security import KeyChain
-from pyndn.security.identity import IdentityManager
-from pyndn.security.identity import MemoryIdentityStorage
-from pyndn.security.identity import MemoryPrivateKeyStorage
-from pyndn.security.policy import NoVerifyPolicyManager
-from pyndn.util import Blob
 
 class NameSyncHandler(object):
     """
