@@ -20,7 +20,9 @@
 import time
 import select
 import sys
+import glob
 import random
+
 from pyndn import Name
 from pyndn import Data
 from pyndn import Face
@@ -165,19 +167,22 @@ def publishNewVersion(name,content,currVer,memcc,keyChain,certificateName,namesp
 
     memcc.add(data)
     namespace.getChild(data.getName().getPrefix(-1))
-    dump("Sent content", content)
-
+    # dump("Sent content", content)
+    print("Published "+str(data.getContent().size())+" bytes, name "+data.getName().toUri())
+    
 
 def main():
     currVer=1
-    name="/com/newspaper/sport/superbowl2017.html"
+    # name="/com/newspaper/sport/superbowl2017.html"
+    name="/ndn/hackathon/cnl-demo/slides"
+    usrPrefix = Name("/com/newspaper/USER/alice")
     random.seed()
     usrPrefix = Name("/com/newspaper/USER/alice/" + str(random.getrandbits(16)))
     print("User prefix : " + usrPrefix.toUri())
     # The default Face will connect using a Unix socket, or to "localhost".
     face = Face("memoria.ndn.ucla.edu")
 
-    namespace = Namespace("/com/newspaper")
+    namespace = Namespace(name)
     namespace.setFace(face)
     # Use the system default key chain and certificate name to sign commands.
     identityStorage = MemoryIdentityStorage()
@@ -202,20 +207,23 @@ def main():
     dump("Register prefix", prefix.toUri())
     memcc.registerPrefix(prefix, onRegisterFailed)
 
-    print("Type your article")
+    folder = promptAndInput("Enter folder with images: ")
+    imageFiles = glob.glob(folder+'/*.jpg')
+    print("loaded "+str(len(imageFiles))+" images")
 
+    idx = 0
+    run = True
 #TODO catch ctrl-c
-    while 1:
-        # Set timeout to 0 for an immediate check.
+    while run:
         isReady, _, _ = select.select([sys.stdin], [], [], 0)
         if len(isReady) != 0:
-            content = promptAndInput("")
-            if content == "leave" or content == "exit":
-                # We will send the leave message below.
-                break
-
-            publishNewVersion(name, content, currVer, memcc, keyChain, certificateName, namespace)
-            currVer+=1
+            print('will publish image '+imageFiles[idx])
+            promptAndInput("")
+            with open(imageFiles[idx],"rb") as f:
+                content = f.read(7500)
+                publishNewVersion(name, content, idx+1, memcc, keyChain, certificateName, namespace)
+            idx += 1
+            run = idx < len(imageFiles)
 
         face.processEvents()
         # We need to sleep for a few milliseconds so we don't use 100% of the CPU.
