@@ -175,7 +175,6 @@ def main():
     currVer=1
     # name="/com/newspaper/sport/superbowl2017.html"
     name="/ndn/hackathon/cnl-demo/slides"
-    usrPrefix = Name("/com/newspaper/USER/alice")
     random.seed()
     usrPrefix = Name("/com/newspaper/USER/alice/" + str(random.getrandbits(16)))
     print("User prefix : " + usrPrefix.toUri())
@@ -203,9 +202,8 @@ def main():
     # Also use the default certificate name to sign data packets.
 
     memcc=MemoryContentCache(face)
-    prefix = Name("/com/newspaper")
-    dump("Register prefix", prefix.toUri())
-    memcc.registerPrefix(prefix, onRegisterFailed)
+    dump("Register prefix", name)
+    memcc.registerPrefix(Name(name), onRegisterFailed)
 
     folder = promptAndInput("Enter folder with images: ")
     imageFiles = glob.glob(folder+'/*.jpg')
@@ -217,13 +215,14 @@ def main():
     while run:
         isReady, _, _ = select.select([sys.stdin], [], [], 0)
         if len(isReady) != 0:
-            print('will publish image '+imageFiles[idx])
             promptAndInput("")
-            with open(imageFiles[idx],"rb") as f:
-                content = f.read(7500)
-                publishNewVersion(name, content, idx+1, memcc, keyChain, certificateName, namespace)
-            idx += 1
-            run = idx < len(imageFiles)
+            if idx < len(imageFiles):
+                print('will publish image '+imageFiles[idx])
+                with open(imageFiles[idx],"rb") as f:
+                    content = f.read()
+                    publishNewVersion(name, content, idx+1, memcc, keyChain, certificateName, namespace)
+                idx += 1
+            # run = idx < len(imageFiles)
 
         face.processEvents()
         # We need to sleep for a few milliseconds so we don't use 100% of the CPU.

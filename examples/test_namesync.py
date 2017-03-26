@@ -184,8 +184,9 @@ def stopGui():
 
 def displayImage(image_data, caption):
     global root, imagePanel, labelPanel
-    image = Image.open("test.jpg")
-    # image = Image.open(io.BytesIO(image_data))
+    # image = Image.open("test.jpg")
+    image = Image.open(io.BytesIO(image_data))
+    # image = Image.frombytes(image_data)
     photo = ImageTk.PhotoImage(image)  
     imagePanel.configure(image=photo)
     imagePanel.image = photo
@@ -196,19 +197,17 @@ def main():
     # logging.getLogger('').addHandler(logging.StreamHandler(sys.stdout))
     # logging.getLogger('').setLevel(logging.INFO)
 
-
-
     defaultUserPrefix = "com/newspaper/USER/bob"
     userPrefix = promptAndInput("Enter user prefix: [" + defaultUserPrefix + "]")
     if userPrefix == "":
         userPrefix = defaultUserPrefix
 
-    defaultNamespacePrefix = "com/newspaper"
+    defaultNamespacePrefix = "/ndn/hackathon/cnl-demo/slides" #"com/newspaper"
     namespacePrefix = promptAndInput("Enter namespace prefix [" + defaultNamespacePrefix + "]: ")
     if namespacePrefix == "":
         namespacePrefix = defaultNamespacePrefix
 
-    host = "memoria.ndn.ucla.edu" #"localhost"
+    host = "memoria.ndn.ucla.edu"
     print("Connecting to " + host)
     print("")
 
@@ -232,11 +231,14 @@ def main():
     
     def onContentSet(namespace, contentNamespace, callbackId):
         if contentNamespace == namespace:
-            dump("Got segmented content ", contentNamespace.content.toRawStr())
+            print("content size "+str(contentNamespace.content.size()))
+            displayImage(contentNamespace.content.toRawStr(), contentNamespace.getName().toUri())
+            # dump("Got segmented content ", contentNamespace.content.toRawStr())
 
     def onNewName(namespace, addedNamespace, callbackId):
         print("namespace ("+addedNamespace.getName().toUri()+") added to "+namespace.getName().toUri())
         if not addedNamespace.getName().get(-1).isSegment():
+            print("start fetching segments")
             segmentStream = SegmentStream(addedNamespace)
             SegmentedContent(segmentStream)
             segmentStream.start()
@@ -263,7 +265,6 @@ def main():
 
             # before producer has namespace.publish call, we manually call onNameAdded as a hack to publish
             namesync.onNameAdded(None, Namespace(Name(input)), 0)
-            # displayImage(None, "random caption")
         face.processEvents()
         if root: 
             root.after(100, process)
