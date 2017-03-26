@@ -161,9 +161,9 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
-def publishNewVersion(name,content,currVer,memcc,keyChain,certificateName,namespace):
+def publishNewVersion(name,content,memcc,keyChain,certificateName,namespace):
     dataName = Name(name)
-    dataName.appendVersion(currVer)
+    dataName.appendVersion(int((datetime.datetime.utcnow()-datetime.datetime.utcfromtimestamp(0)).total_seconds()*1000))
 
     # segmenter!
     allChunks = []
