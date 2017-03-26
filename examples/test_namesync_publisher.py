@@ -179,7 +179,9 @@ def publishNewVersion(name,content,currVer,memcc,keyChain,certificateName,namesp
             data.getMetaInfo().setFinalBlockId(Name().appendSegment(len(allChunks)-1)[0])
             keyChain.sign(data, certificateName)
             memcc.add(data)
-            namespace.getChild(data.getName().getPrefix(-1))
+            if idx == 0:
+                print("ADD CHILD")
+                namespace.getChild(data.getName())
             idx += 1
             print("Published "+str(data.getContent().size())+" bytes, name "+data.getName().toUri())
     else:
@@ -188,7 +190,7 @@ def publishNewVersion(name,content,currVer,memcc,keyChain,certificateName,namesp
         data.getMetaInfo().setFinalBlockId(data.getName().get(-1))
         keyChain.sign(data, certificateName)
         memcc.add(data)
-        namespace.getChild(data.getName().getPrefix(-1))
+        namespace.getChild(data.getName())
         # dump("Sent content", content)
         print("Published "+str(data.getContent().size())+" bytes, name "+data.getName().toUri())
     

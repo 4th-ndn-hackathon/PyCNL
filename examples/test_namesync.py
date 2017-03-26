@@ -237,10 +237,10 @@ def main():
 
     def onNewName(namespace, addedNamespace, callbackId):
         print("namespace ("+addedNamespace.getName().toUri()+") added to "+namespace.getName().toUri())
-        if not addedNamespace.getName().get(-1).isSegment():
+        if addedNamespace.getName().get(-1).isSegment() and addedNamespace.getName().get(-1).toSegment() == 0:
             print("start fetching segments")
-            addedNamespace.addOnContentSet(onContentSet)
-            SegmentedContent(addedNamespace).start()
+            addedNamespace.getParent().addOnContentSet(onContentSet)
+            SegmentedContent(addedNamespace.getParent()).start()
 
     newspaper.addOnNameAdded(onNewName)
     newspaper.setFace(face)
