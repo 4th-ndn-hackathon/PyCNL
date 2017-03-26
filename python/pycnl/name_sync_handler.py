@@ -40,10 +40,11 @@ class NameSyncHandler(object):
         face = namespace._getFace()
         self.nameSync_ = NameSyncHandler.NameSync(namespace, userPrefix, face, keyChain, certificateName)
         namespace.addOnNameAdded(self.onNameAdded)
+        self.enableAnnounce_ = True
 
-    def onNameAdded(self, namespace, addedNamespace, callbackId, doAnnounce = True):
+    def onNameAdded(self, namespace, addedNamespace, callbackId):
         # we don't announce the names we received via sync, we only announce the ones we actually publish 
-        if doAnnounce:
+        if self.enableAnnounce_:
             self.nameSync_.announce(addedNamespace.name)
 
     class NameSync(object):
@@ -148,7 +149,7 @@ class NameSyncHandler(object):
                 if message.sequenceNo == sequenceNo:
                     # Use setattr because "from" is a reserved keyword.
                     # For now we have one message only...
-                    content = json.dumps({'name':[message.name.toUri()], 
+                    content = json.dumps({'names':[message.name.toUri()],
                         'timestamp':int(round(message.time / 1000.0))})
                 gotContent = True
                 break
@@ -173,8 +174,13 @@ class NameSyncHandler(object):
             # TODO: Check if this works in Python 3.
             try:
                 content = json.loads(data.getContent().toRawStr())
-                for item in content['name']:
-                    self._namespace.getChild(Name(item))
+                try:
+                    # Set this False to prevent onNameAdded from re-announcing.
+                    self.enableAnnounce_ = False
+                    for item in content['names']:
+                        self._namespace.getChild(Name(item))
+                finally:
+                    self.enableAnnounce_ = True
             except Exception, e:
                 print("got exception loading json from data packet: "+data.getContent().toRawStr())
         
