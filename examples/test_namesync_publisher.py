@@ -2,6 +2,8 @@
 #
 # Copyright (C) 2014-2017 Regents of the University of California.
 # Author: Jeff Thompson <jefft0@remap.ucla.edu>
+# Author: Piotr Zuraniewski <piotr.zuraniewski@tno.nl>
+# Author: Seweryn Dynerowicz <seweryn.dynerowicz@ulusofona.pt>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by

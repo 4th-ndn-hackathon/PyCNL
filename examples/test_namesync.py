@@ -2,6 +2,8 @@
 #
 # Copyright (C) 2014-2017 Regents of the University of California.
 # Author: Jeff Thompson <jefft0@remap.ucla.edu>
+# Author: Zhehao Wang <zhehao@remap.ucla.edu>
+# Author: Peter Gusev <peter@remap.ucla.edu>
 # Derived from ChronoChat-js by Qiuhan Ding and Wentao Shang.
 #
 # This program is free software: you can redistribute it and/or modify
