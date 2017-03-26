@@ -41,11 +41,13 @@ class NameSyncHandler(object):
         self.nameSync_ = NameSyncHandler.NameSync(namespace, userPrefix, face, keyChain, certificateName)
         namespace.addOnNameAdded(self.onNameAdded)
 
-    def onNameAdded(self, namespace, addedNamespace, callbackId):
-        self.nameSync_.announce(addedNamespace.name)
+    def onNameAdded(self, namespace, addedNamespace, callbackId, doAnnounce = False):
+        # we don't announce the names we received via sync, we only announce the ones we actually publish 
+        if doAnnounce:
+            self.nameSync_.announce(addedNamespace.name)
 
     class NameSync(object):
-        def __init__(self, namespace, userPrefix, face, keyChain,certificateName):
+        def __init__(self, namespace, userPrefix, face, keyChain, certificateName):
             self._namespace = namespace
             self._namespacePrefix = namespace.getName()
             self._userPrefix = userPrefix
@@ -57,6 +59,7 @@ class NameSyncHandler(object):
             self._maxMessageCacheLength = 100
             self._isRecoverySyncState = False
             self._syncLifetime = 5000.0 # milliseconds
+            self._namespaceMessageFreshnessPeriod = 4000.0
 
             self._sync = ChronoSync2013(
                self._sendInterest, self._initial, Name(userPrefix),
@@ -154,6 +157,7 @@ class NameSyncHandler(object):
                 # TODO: Check if this works in Python 3.
                 data = Data(interest.getName())
                 data.setContent(content)
+                data.getMetaInfo().setFreshnessPeriod(self._namespaceMessageFreshnessPeriod)
                 self._keyChain.sign(data, self._certificateName)
                 try:
                     face.putData(data)

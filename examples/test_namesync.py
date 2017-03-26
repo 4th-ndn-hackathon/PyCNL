@@ -264,7 +264,7 @@ def main():
                 # break
 
             # before producer has namespace.publish call, we manually call onNameAdded as a hack to publish
-            namesync.onNameAdded(None, Namespace(Name(input)), 0)
+            namesync.onNameAdded(None, Namespace(Name(input)), 0, True)
         face.processEvents()
         if root: 
             root.after(100, process)
