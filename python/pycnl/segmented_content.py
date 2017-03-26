@@ -23,20 +23,27 @@ child segment packets into a single block of memory.
 """
 
 from pyndn.util import Blob
+from pycnl.segment_stream import SegmentStream
 
 class SegmentedContent(object):
-    def __init__(self, segmentStream):
+    def __init__(self, segmentStreamOrNamespace):
         """
-        Create a SegmentedContent object to use the given segmentStream to
-        assemble content. You should use segmentStream.namespace.addOnContentSet
-        to add the callback which is called when the content is complete. Then
-        you should call start().
+        Create a SegmentedContent object to use a SegmentStream to assemble
+        content. You should use getNamespace().addOnContentSet to add the
+        callback which is called when the content is complete. Then you should
+        call start().
 
-        :param SegmentStream segmentStream: The SegmentStream where the
+        :param segmentStreamOrNamespace: A SegmentStream where its
           Namespace is a node whose children are the names of segment Data
-          packets.
+          packets. Alternatively, if this is a Namespace object, then use it to
+          create a SegmentStream which you can access with getSegmentStream().
+        :type segmentStreamOrNamespace: SegmentStream or Namespace
         """
-        self._segmentStream = segmentStream
+        if isinstance(segmentStreamOrNamespace, SegmentStream):
+            self._segmentStream = segmentStreamOrNamespace
+        else:
+            self._segmentStream = SegmentStream(segmentStreamOrNamespace)
+
         self._segments = []
         self._totalSize = 0
 
