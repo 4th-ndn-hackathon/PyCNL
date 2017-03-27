@@ -20,9 +20,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # A copy of the GNU Lesser General Public License is in the file COPYING.
 
-# This include is produced by:
-# protoc --python_out=. chatbuf.proto
-import chatbuf_pb2
 import sys
 import logging
 import time
