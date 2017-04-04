@@ -33,7 +33,7 @@ def dump(*list):
 
 def main():
     face = Face("memoria.ndn.ucla.edu")
-    page = Namespace("/ndn/edu/ucla/remap/demo/ndn-js-test/named-data.net/project/ndn-ar2011.html/%FDT%F7n%9E")
+    page = Namespace("/ndn/edu/ucla/remap/demo/ndn-js-test/named-data.net/project/ndn-ar2011.html/%FDX%DC5B")
     page.setFace(face)
 
     enabled = [True]
